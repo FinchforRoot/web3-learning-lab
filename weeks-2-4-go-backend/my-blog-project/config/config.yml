@@ -1,0 +1,13 @@
+server:
+  port: "8910"
+  host: "localhost"
+  mode: "debug"
+database:
+  host: "127.0.0.1"
+  port: 3306
+  username: "root"
+  password: "password"
+  dbname: "my_blog"
+jwt:
+  secret: "jwt-secret"
+  expire: "24h"

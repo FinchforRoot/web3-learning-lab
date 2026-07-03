@@ -167,7 +167,7 @@ contract MyToken {
     function batchTransfer(address[] memory recipients, uint256[] memory amounts) public whenNotPause returns (bool) {
         uint reLen = recipients.length;
         require(reLen > 0, "ERC20: no recipients");
-        require(reLen < 11, "ERC20: recipients should less 11");
+        require(reLen <= 10, "ERC20: recipients should less 11");
         require(amounts.length==reLen,"BatchTransfer: array length mismatch");
 
         uint totalAmount = 0;

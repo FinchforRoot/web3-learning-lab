@@ -19,7 +19,7 @@ func main() {
 	if rpcURL == "" {
 		log.Fatal("ETH_RPC_URL is not set")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	client, err := ethclient.DialContext(ctx, rpcURL)
 	if err != nil {
@@ -32,7 +32,7 @@ func main() {
 		log.Fatalf("failed to get chain id: %v", err)
 	}
 	fmt.Println("╔══════════════════════════════════════╗")
-	fmt.Println("║     Ethereum 区块监控工具 v1.0      ║")
+	fmt.Println("║     Ethereum 区块监控工具 v1.0         ║")
 	fmt.Println("╠══════════════════════════════════════╣")
 	fmt.Printf("║ RPC URL  : %-24s ║\n", rpcURL)
 	fmt.Printf("║ Chain ID : %-24s ║\n", chainID.String())
@@ -63,15 +63,19 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			latestHeader, err := client.HeaderByNumber(ctx, nil)
+			innerCtx, innerCancel := withTimeout(5 * time.Second)
+			latestHeader, err := client.HeaderByNumber(innerCtx, nil)
+			innerCancel()
 			if err != nil {
 				log.Printf("获取区块失败: %v", err)
 				continue
 			}
 			currentBlock := latestHeader.Number.Uint64()
 			if currentBlock > lastBlockNumber {
-				for blockNum := lastBlockNumber + 1; blockNum < currentBlock; blockNum++ {
-					block, err := client.BlockByNumber(ctx, big.NewInt(int64(blockNum)))
+				for blockNum := lastBlockNumber + 1; blockNum <= currentBlock; blockNum++ {
+					blockCtx, blockCancel := withTimeout(5 * time.Second)
+					block, err := client.BlockByNumber(blockCtx, big.NewInt(int64(blockNum)))
+					blockCancel()
 					if err != nil {
 						log.Printf("获取区块 %d 失败: %v", blockNum, err)
 						continue
@@ -105,4 +109,9 @@ func printDetailedBlock(block *types.Block, isInitial bool) {
 	fmt.Printf("   ├─ Gas限制  : %d\n", block.GasLimit())
 	fmt.Printf("   ├─ Gas使用  : %d\n", block.GasUsed())
 	fmt.Printf("   └─ 难度     : %d\n", block.Difficulty().Uint64())
+}
+
+// 辅助函数：为每次 RPC 调用创建超时 context
+func withTimeout(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), timeout)
 }
